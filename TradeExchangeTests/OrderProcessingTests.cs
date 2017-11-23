@@ -15,26 +15,7 @@ namespace TradeExchangeTests
 {
     public class OrderProcessingTests : TestKit
     {
-        [Fact]
-        public void Given_order_actor_When_Restart_it_should_maintain_state()
-        {
-            var balance = Sys.ActorOf<UserBalance>("test balance");
-            balance.Tell(new AddFunds(Currency.Btc.Emit(10)));
-            
-            var orderBook = CreateTestProbe();
-            balance.Tell(new AddMarket("test market",orderBook, Symbol.UsdBtc));
-            var newSellOrder = Symbol.UsdBtc.Sell(7000,5,"a");
-            balance.Tell(newSellOrder);
-            balance.Tell(new OrderBookActor.OrderExecuted("a",5, 8000.Usd()));
-            //balance should be 5 * 8 = 40000
-            Watch(balance);
-            Sys.Stop(balance);
-            ExpectTerminated(balance);
-
-            var balanceTest = ActorOfAsTestActorRef<UserBalance>("test balance");
-            balanceTest.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(40000M);
-            balanceTest.UnderlyingActor.Balances[Currency.Btc].Amount.ShouldEqual(5M);
-        }
+     
         
 
        
@@ -64,7 +45,8 @@ namespace TradeExchangeTests
             var orderBook = CreateTestProbe();
 
             orderActor.Tell(new OrderActor.Init(givenOrder));
-            orderActor.Tell(new OrderActor.Execute(orderBook));
+            orderActor.Tell(new OrderActor.InitBalance(userBalance.Ref));
+            orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
 
             orderBook.Send(orderActor, new OrderBookActor.OrderExecuted(orderNum, givenOrder.Amount / 2, 7500.Usd()));
             orderBook.Send(orderActor, new OrderBookActor.OrderExecuted(orderNum, givenOrder.Amount / 2, 7000.Usd()));
@@ -98,7 +80,7 @@ namespace TradeExchangeTests
 
             orderActor.Tell(new OrderActor.Init(givenOrder));
 
-            var orderBook = this.CreateTestProbe();
+            var orderBook = CreateTestProbe();
             orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
 
             orderBook.ExpectMsg<NewBuyOrder>(o => o.Amount == givenOrder.Amount);

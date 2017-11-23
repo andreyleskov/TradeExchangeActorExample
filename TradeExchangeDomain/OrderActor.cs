@@ -9,26 +9,47 @@ namespace TradeExchangeDomain
     {
         protected Order Order;
         private decimal _amountLeft;
+        private IActorRef BalanceRef;
         
         public OrderActor()
         {
+            PersistenceId = Self.Path.Name;
+            
             Command<Init>(i =>
                           {
                               Order = i.Order;
-                              _amountLeft = 0;
+                              _amountLeft = Order.Amount;
                           });
+            Command<InitBalance>(i =>
+                                   {
+                                       BalanceRef = i.BalanceRef;
+                                   });
             Command<OrderBookActor.OrderExecuted>(e =>
                                    {
                                        _amountLeft -= e.Amount;
                                        if (_amountLeft < 0)
                                            throw new InvalidOrderStateException();
                                        
-                                       Context.Parent.Tell(e);
+                                       BalanceRef.Tell(e);
                                        if(_amountLeft == 0)
-                                           Context.Parent.Tell(new OrderCompleted(Order.Id));
+                                           BalanceRef.Tell(new OrderCompleted(Order.Id));
                                    });
-            Recover<Order>(o => Order = o);
+            Recover<Order>(o =>
+                           {
+                               Order = o;
+                               _amountLeft = Order.Amount;
+                           });
             Recover<OrderBookActor.OrderExecuted>(o => _amountLeft -= o.Amount);
+        }
+
+        public class InitBalance
+        {
+            public IActorRef BalanceRef { get; private set; }
+
+            public InitBalance(IActorRef balance)
+            {
+                BalanceRef = balance;
+            }
         }
 
         public override string PersistenceId { get; }

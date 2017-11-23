@@ -55,5 +55,26 @@ namespace TradeExchangeTests
             balance.UnderlyingActor.Balances[Currency.Btc].Amount.ShouldEqual(11.5M);
             balance.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(10000M);
         }
+        
+        [Fact]
+        public void Given_balance_actor_When_Restart_it_should_maintain_state()
+        {
+            var balance = Sys.ActorOf<UserBalance>("test_balance");
+            balance.Tell(new AddFunds(Currency.Btc.Emit(10)));
+            
+            var orderBook = CreateTestProbe();
+            balance.Tell(new AddMarket("test_market",orderBook, Symbol.UsdBtc));
+            var newSellOrder = Symbol.UsdBtc.Sell(7000,5,"a");
+            balance.Tell(newSellOrder);
+            balance.Tell(new OrderBookActor.OrderExecuted("a",5, 8000.Usd()));
+            //balance should be 5 * 8 = 40000
+            Watch(balance);
+            Sys.Stop(balance);
+            ExpectTerminated(balance);
+
+            var balanceTest = ActorOfAsTestActorRef<UserBalance>("test_balance");
+            balanceTest.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(40000M);
+            balanceTest.UnderlyingActor.Balances[Currency.Btc].Amount.ShouldEqual(5M);
+        }
     }
 }
