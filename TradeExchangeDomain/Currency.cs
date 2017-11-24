@@ -2,8 +2,11 @@
 {
     public class Currency
     {
+        public string Name { get; }
+
         private Currency(string name)
         {
+            Name = name;
         }
 
         public static Currency Usd { get; } = new Currency("USD");

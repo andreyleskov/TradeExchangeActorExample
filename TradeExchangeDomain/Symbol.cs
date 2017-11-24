@@ -10,7 +10,7 @@
         {
             Base = @base;
             Target = target;
-            _name = Base.ToString() + Target.ToString();
+            _name = Base.ToString() + Target;
         }
 
         public override string ToString() => _name;

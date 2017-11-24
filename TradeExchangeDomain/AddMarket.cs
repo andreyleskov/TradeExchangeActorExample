@@ -5,9 +5,15 @@ namespace TradeExchangeDomain
 {
     public class AddMarket
     {
-        public AddMarket(string testMarket, IActorRef orderBook, Symbol usdBtc)
+        public AddMarket(string name, IActorRef market, Symbol usdBtc)
         {
-            throw new NotImplementedException();
+            Name = name;
+            Market = market;
+            Symbol = usdBtc;
         }
+
+        public string Name { get; }
+        public IActorRef Market { get; }
+        public Symbol Symbol { get; }
     }
 }
