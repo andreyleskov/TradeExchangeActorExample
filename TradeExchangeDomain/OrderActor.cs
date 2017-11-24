@@ -14,14 +14,15 @@ namespace TradeExchangeDomain
         public OrderActor()
         {
             PersistenceId = Self.Path.Name;
-            
+
+            Command<GracefulShutdown>(s => Context.Stop(Self));
             Command<Init>(i =>
                           {
-                              Persist(new OrderCreated(Order),
+                              Persist(new OrderCreated(i.Order),
                                       c =>
                                       {
                                           Order = c.Order;
-                                          _amountLeft = Order.Amount;
+                                          _amountLeft = c.Order.Amount;
                                       });
                           });
             Command<InitBalance>(i =>
@@ -41,7 +42,7 @@ namespace TradeExchangeDomain
                                                                   if (_amountLeft == 0)
                                                                       BalanceRef.Tell(new OrderCompleted(Order.Id));
                                                               });
-                                                  }, e => e.OrderNum == Order.Id);
+                                                  }, e => e.OrderNum == Order?.Id);
             Recover<OrderCreated>(o =>
                            {
                                Order = o.Order;

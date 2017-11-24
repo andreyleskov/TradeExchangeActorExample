@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Transactions;
 using Akka.Actor;
 using Akka.Persistence;
@@ -22,16 +23,32 @@ namespace TradeExchangeDomain
         {
             PersistenceId = Self.Path.Name;
 
+            Command<GracefulShutdown>(s =>
+                                      {
+                                          var actorRefs = Context.GetChildren().ToArray();
+                                          Task.WhenAll(actorRefs
+                                                              .Select(c => c.GracefulStop(TimeSpan.FromSeconds(10), s))
+                                                              .ToArray())
+                                              .ContinueWith(t => PoisonPill.Instance)
+                                              .PipeTo(Self);
+                                      });
             Command<AddMarket>(m =>
                                {
                                    Markets[m.Symbol] = m.Market;
                                    foreach (var pending in PendingBuyOrders.Values.Where(o => o.Position == m.Symbol))
                                    {
-                                       CreateBuyOrder(m.Market,pending);
+                                       ActiveOrders.Add(pending.Id);
+                                       var orderActor = Context.ActorOf<BuyOrderActor>(pending.Id);
+                                       orderActor.Tell(new OrderActor.InitBalance(Self));
+                                       orderActor.Tell(new OrderActor.Execute(m.Market));
                                    }
+                                   
                                    foreach (var pending in PendingSellOrders.Values.Where(o => o.Position == m.Symbol))
                                    {
-                                       CreateSellOrder(m.Market,pending);
+                                       ActiveOrders.Add(pending.Id);
+                                       var orderActor = Context.ActorOf<SellOrderActor>(pending.Id);
+                                       orderActor.Tell(new OrderActor.InitBalance(Self));
+                                       orderActor.Tell(new OrderActor.Execute(m.Market));
                                    }
                                });
             Command<AddFunds>(f =>
@@ -52,7 +69,7 @@ namespace TradeExchangeDomain
                                                {
                                                    Persist(new OrderCompleted(e.OrderNum),
                                                            c => ActiveOrders.Remove(c.Num));
-                                               });
+                                               },e => ActiveOrders.Contains(e.OrderNum));
             Command<NewBuyOrder>(o =>
                                  {
                                      if (!Markets.TryGetValue(o.Position, out var market))
@@ -90,10 +107,12 @@ namespace TradeExchangeDomain
             Recover<SellOrderCreated>(e =>
                                       {
                                           PendingSellOrders.Add(e.Order.Id,e.Order);
+                                          DecreaseBalance(e.Order.Position.Target.Emit(e.Order.Amount));
                                       });
             Recover<BuyOrderCreated>(e =>
                                       {
                                           PendingBuyOrders.Add(e.Order.Id,e.Order);
+                                          DecreaseBalance(e.Order.Price * e.Order.Amount);
                                       });
             Recover<OrderCompleted>(e =>
                                     {
@@ -247,5 +266,9 @@ namespace TradeExchangeDomain
                 Value = value;
             }
         }
+    }
+
+    public class GracefulShutdown
+    {
     }
 }

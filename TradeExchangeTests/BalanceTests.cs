@@ -6,11 +6,16 @@ using Akka.TestKit.Xunit2;
 using Should;
 using TradeExchangeDomain;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace TradeExchangeTests
 {
     public class BalanceTests : TestKit
     {
+        public BalanceTests(ITestOutputHelper output):base("test",output)
+        {
+            
+        }
         [Fact]
         public void Given_balance_actor_When_creating_order_Then_order_book_receives_order()
         {
@@ -69,27 +74,32 @@ namespace TradeExchangeTests
             
             var orderBook = CreateTestProbe();
             balance.Tell(new AddMarket("test_market",orderBook, Symbol.UsdBtc));
-            var newSellOrder = Symbol.UsdBtc.Sell(7000,5,"a");
+            var newSellOrder = Symbol.UsdBtc.Sell(7000,5,"order_a");
             balance.Tell(newSellOrder);
             
-            //somebody bought 2 btc for 8000$ each, 3 remains for sale  
-            await Task.Delay(Dilated(TimeSpan.FromSeconds(1)));
-
-            balance.Tell(new UserBalance.AddDueOrderExecuted("a",  8000.Usd() * 2));
-            Watch(balance);
-            Sys.Stop(balance);
-            ExpectTerminated(balance);
+            //somebody boughе 2 btc for 8000$ each, 3 remains for sale  
+         
+            balance.Tell(new UserBalance.AddDueOrderExecuted("order_a",  8000.Usd() * 2));
             
+            //terminate balance and children orders
+            await balance.GracefulStop(TimeSpan.FromSeconds(10), new GracefulShutdown());
+            
+            //creating balance from scratch, it should retrive its state from persistence
             var balanceTest = ActorOfAsTestActorRef<UserBalance>("test_balance");
-            await Task.Delay(Dilated(TimeSpan.FromSeconds(1000)));
+            balanceTest.Tell(new AddMarket("test_market",orderBook, Symbol.UsdBtc));
+            
+            //wait some time to recover
+            await Task.Delay(Dilated(TimeSpan.FromSeconds(5)));
 
+            //check recovered state
             balanceTest.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(16000M);
             balanceTest.UnderlyingActor.Balances[Currency.Btc].Amount.ShouldEqual(5M);
             
-            balanceTest.Tell(new UserBalance.AddDueOrderExecuted("a",  7500.Usd() * 3));
-            await Task.Delay(Dilated(TimeSpan.FromSeconds(1000)));
+            //check orders can be created after recover
+            balanceTest.Tell(new UserBalance.AddDueOrderExecuted("order_a",  7500.Usd() * 3));
+            await Task.Delay(Dilated(TimeSpan.FromSeconds(1)));
 
-            balanceTest.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(28500M);
+            balanceTest.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(38500M);
             balanceTest.UnderlyingActor.Balances[Currency.Btc].Amount.ShouldEqual(5M);
         }
     }

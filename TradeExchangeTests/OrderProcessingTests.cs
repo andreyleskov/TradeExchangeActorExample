@@ -10,28 +10,28 @@ using Akka.Util.Internal;
 using Should;
 using TradeExchangeDomain;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace TradeExchangeTests
 {
     public class OrderProcessingTests : TestKit
     {
-     
+        public OrderProcessingTests(ITestOutputHelper output):base("test_system",output)
+        {
+            
+        }
         
-
-       
-
         [Fact]
         public void Given_order_actor_When_completes_more_then_amount_Then_got_an_error()
         {
             var orderActor = Sys.ActorOf<SellOrderActor>("test");
-            Watch(orderActor);
 
-            orderActor.Tell(new OrderActor.Init(new Order(Symbol.UsdBtc, Currency.Usd.Emit(5000),2)));
+            orderActor.Tell(new OrderActor.Init(new Order(Symbol.UsdBtc, Currency.Usd.Emit(5000),2, "test")));
+            orderActor.Tell(new OrderActor.InitBalance(TestActor));
             orderActor.Tell(new OrderBookActor.OrderExecuted("test",1, 5000.Usd()));
             //overflow, some mistake !
             orderActor.Tell(new OrderBookActor.OrderExecuted("test",1.5M, 6000.Usd()));
-            //order should terminate, as we have invalid state; 
-            ExpectTerminated(orderActor);
+            EventFilter.Exception<InvalidOrderStateException>();
         }
 
 
@@ -40,7 +40,7 @@ namespace TradeExchangeTests
         {
             var orderNum = Guid.NewGuid().ToString();
             var orderActor = Sys.ActorOf<SellOrderActor>(orderNum);
-            var givenOrder = new Order(Symbol.UsdBtc, new Money(7000, Currency.Usd), 5);
+            var givenOrder = new Order(Symbol.UsdBtc, new Money(7000, Currency.Usd), 5,orderNum);
             var userBalance = CreateTestProbe();
             var orderBook = CreateTestProbe();
 
@@ -51,8 +51,12 @@ namespace TradeExchangeTests
             orderBook.Send(orderActor, new OrderBookActor.OrderExecuted(orderNum, givenOrder.Amount / 2, 7500.Usd()));
             orderBook.Send(orderActor, new OrderBookActor.OrderExecuted(orderNum, givenOrder.Amount / 2, 7000.Usd()));
 
-            userBalance.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == givenOrder.Amount / 2);
-            userBalance.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == givenOrder.Amount / 2);
+            var msgA = userBalance.ExpectMsg<UserBalance.AddDueOrderExecuted>();
+            msgA.TotalChange.ShouldEqual(7500.Usd() * givenOrder.Amount / 2);
+
+            var msgB = userBalance.ExpectMsg<UserBalance.AddDueOrderExecuted>();
+            msgB.TotalChange.ShouldEqual(7000.Usd() * givenOrder.Amount / 2);
+            
             userBalance.ExpectMsg<OrderActor.OrderCompleted>();
         }
 

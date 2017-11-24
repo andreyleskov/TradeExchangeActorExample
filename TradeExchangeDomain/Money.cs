@@ -8,6 +8,7 @@ namespace TradeExchangeDomain
     /// </summary>
     public class Money
     {
+        private readonly string _description;
         public decimal Amount { get; }
         public Currency Currency { get; }
 
@@ -15,6 +16,28 @@ namespace TradeExchangeDomain
         {
             Amount = amount;
             Currency = cur;
+            _description = $"{amount} {cur}"; 
+        }
+
+        public override bool Equals(object obj)
+        {
+            if(obj is Money m)
+                return m.Equals(this);
+            return false;
+        }
+
+        protected bool Equals(Money other)
+        {
+            return Amount == other.Amount
+                   && Equals(Currency, other.Currency);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (Amount.GetHashCode() * 397) ^ (Currency != null ? Currency.GetHashCode() : 0);
+            }
         }
 
         public static Money operator +(Money a, Money b)
@@ -69,9 +92,10 @@ namespace TradeExchangeDomain
                 throw new CurrencyMismatchException();
         }
 
-        public bool IsNegative()
+
+        public override string ToString()
         {
-            return Amount < 0;
+            return _description;
         }
     }
 
