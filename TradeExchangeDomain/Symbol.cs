@@ -3,8 +3,6 @@
     public class Symbol
     {
         private readonly string _name;
-        public Currency Base { get; }
-        public Currency Target { get; }
 
         public Symbol(Currency @base, Currency target)
         {
@@ -12,6 +10,11 @@
             Target = target;
             _name = Base.ToString() + Target;
         }
+
+        public Currency Base { get; }
+        public Currency Target { get; }
+
+        public static Symbol UsdBtc { get; } = new Symbol(Currency.Usd, Currency.Btc);
 
         public override bool Equals(object obj)
         {
@@ -25,11 +28,12 @@
 
         public override int GetHashCode()
         {
-            return (_name != null ? _name.GetHashCode() : 0);
+            return _name != null ? _name.GetHashCode() : 0;
         }
 
-        public override string ToString() => _name;
-
-        public static Symbol UsdBtc { get; } = new Symbol(Currency.Usd, Currency.Btc);
+        public override string ToString()
+        {
+            return _name;
+        }
     }
 }

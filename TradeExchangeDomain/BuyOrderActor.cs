@@ -1,5 +1,4 @@
 ﻿using Akka.Actor;
-using Akka.Persistence;
 
 namespace TradeExchangeDomain
 {
@@ -7,7 +6,7 @@ namespace TradeExchangeDomain
     {
         public BuyOrderActor()
         {
-          Command<Execute>(e => e.OrderBook.Tell(new NewBuyOrder(Order), Self));
+            Command<Execute>(e => e.OrderBook.Tell(new NewBuyOrder(Order), Self));
         }
 
         protected override void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender)

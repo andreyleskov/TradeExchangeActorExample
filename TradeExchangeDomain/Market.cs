@@ -4,8 +4,8 @@ namespace TradeExchangeDomain
 {
     public class Market
     {
-        private readonly Symbol _symbol;
         private readonly IActorRef _orderbook;
+        private readonly Symbol _symbol;
 
         public Market(IActorRef orderbook, Symbol symbol)
         {

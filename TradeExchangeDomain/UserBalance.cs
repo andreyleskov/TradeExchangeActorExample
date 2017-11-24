@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Transactions;
 using Akka.Actor;
 using Akka.Persistence;
 
@@ -10,15 +9,6 @@ namespace TradeExchangeDomain
 {
     public class UserBalance : ReceivePersistentActor
     {
-        public IDictionary<Currency, Money> Balances { get; } = new Dictionary<Currency, Money>();
-        public override string PersistenceId { get; }
-        public HashSet<string> ActiveOrders { get; } = new HashSet<string>();
-        public IDictionary<Symbol, IActorRef> Markets { get; } = new Dictionary<Symbol, IActorRef>();
-
-        public Dictionary<string,Order> PendingBuyOrders { get; } = new Dictionary<string, Order>();
-        public Dictionary<string,Order> PendingSellOrders { get; } = new Dictionary<string, Order>();
-        
-
         public UserBalance()
         {
             PersistenceId = Self.Path.Name;
@@ -27,8 +17,8 @@ namespace TradeExchangeDomain
                                       {
                                           var actorRefs = Context.GetChildren().ToArray();
                                           Task.WhenAll(actorRefs
-                                                              .Select(c => c.GracefulStop(TimeSpan.FromSeconds(10), s))
-                                                              .ToArray())
+                                                           .Select(c => c.GracefulStop(TimeSpan.FromSeconds(10), s))
+                                                           .ToArray())
                                               .ContinueWith(t => PoisonPill.Instance)
                                               .PipeTo(Self);
                                       });
@@ -42,7 +32,7 @@ namespace TradeExchangeDomain
                                        orderActor.Tell(new OrderActor.InitBalance(Self));
                                        orderActor.Tell(new OrderActor.Execute(m.Market));
                                    }
-                                   
+
                                    foreach (var pending in PendingSellOrders.Values.Where(o => o.Position == m.Symbol))
                                    {
                                        ActiveOrders.Add(pending.Id);
@@ -57,19 +47,17 @@ namespace TradeExchangeDomain
                                           a => { IncreaseBalance(f.Value); });
                               });
             Command<AddDueOrderExecuted>(e =>
-                                                  {
-                                                      Persist(new BalanceChangedDueToOrderExecution(e.OrderNum,e.TotalChange),
-                                                              ex =>
-                                                              {
-                                                                  IncreaseBalance(ex.ObjPrice);
-                                                              });
-                                                      
-                                                  },e => ActiveOrders.Contains(e.OrderNum));
+                                         {
+                                             Persist(new BalanceChangedDueToOrderExecution(e.OrderNum, e.TotalChange),
+                                                     ex => { IncreaseBalance(ex.ObjPrice); });
+                                         },
+                                         e => ActiveOrders.Contains(e.OrderNum));
             Command<OrderActor.OrderCompleted>(e =>
                                                {
                                                    Persist(new OrderCompleted(e.OrderNum),
                                                            c => ActiveOrders.Remove(c.Num));
-                                               },e => ActiveOrders.Contains(e.OrderNum));
+                                               },
+                                               e => ActiveOrders.Contains(e.OrderNum));
             Command<NewBuyOrder>(o =>
                                  {
                                      if (!Markets.TryGetValue(o.Position, out var market))
@@ -88,7 +76,6 @@ namespace TradeExchangeDomain
                                  });
             Command<NewSellOrder>(o =>
                                   {
-                                      
                                       if (!Markets.TryGetValue(o.Position, out var market))
                                       {
                                           Sender.Tell(new Status.Failure(new UnsupportedMarketException()));
@@ -106,14 +93,14 @@ namespace TradeExchangeDomain
 
             Recover<SellOrderCreated>(e =>
                                       {
-                                          PendingSellOrders.Add(e.Order.Id,e.Order);
+                                          PendingSellOrders.Add(e.Order.Id, e.Order);
                                           DecreaseBalance(e.Order.Position.Target.Emit(e.Order.Amount));
                                       });
             Recover<BuyOrderCreated>(e =>
-                                      {
-                                          PendingBuyOrders.Add(e.Order.Id,e.Order);
-                                          DecreaseBalance(e.Order.Price * e.Order.Amount);
-                                      });
+                                     {
+                                         PendingBuyOrders.Add(e.Order.Id, e.Order);
+                                         DecreaseBalance(e.Order.Price * e.Order.Amount);
+                                     });
             Recover<OrderCompleted>(e =>
                                     {
                                         PendingSellOrders.Remove(e.Num);
@@ -123,9 +110,17 @@ namespace TradeExchangeDomain
             Recover<BalanceChangedDueToOrderExecution>(c => IncreaseBalance(c.ObjPrice));
         }
 
+        public IDictionary<Currency, Money> Balances { get; } = new Dictionary<Currency, Money>();
+        public override string PersistenceId { get; }
+        public HashSet<string> ActiveOrders { get; } = new HashSet<string>();
+        public IDictionary<Symbol, IActorRef> Markets { get; } = new Dictionary<Symbol, IActorRef>();
+
+        public Dictionary<string, Order> PendingBuyOrders { get; } = new Dictionary<string, Order>();
+        public Dictionary<string, Order> PendingSellOrders { get; } = new Dictionary<string, Order>();
+
         private void IncreaseBalance(Money money)
         {
-            if (Balances.TryGetValue(money.Currency,out Money existingMoney))
+            if (Balances.TryGetValue(money.Currency, out var existingMoney))
                 Balances[money.Currency] = money + existingMoney;
             else
                 Balances[money.Currency] = money;
@@ -133,7 +128,7 @@ namespace TradeExchangeDomain
 
         private void ExecuteSellOrder(SellOrderCreated evt, IActorRef market)
         {
-            Order o = evt.Order;
+            var o = evt.Order;
             DecreaseBalance(o.Position.Target.Emit(o.Amount));
             CreateSellOrder(market, o);
         }
@@ -149,12 +144,12 @@ namespace TradeExchangeDomain
 
         private bool CheckBalance(Money total)
         {
-            return Balances.TryGetValue(total.Currency, out Money balance) && balance >= total;
+            return Balances.TryGetValue(total.Currency, out var balance) && balance >= total;
         }
-        
+
         private void DecreaseBalance(Money total)
         {
-            if (!Balances.TryGetValue(total.Currency, out Money balance))
+            if (!Balances.TryGetValue(total.Currency, out var balance))
                 throw new NotEnoughFundsException();
 
             if (balance < total)
@@ -166,7 +161,7 @@ namespace TradeExchangeDomain
 
         private void ExecuteBuyOrder(BuyOrderCreated evt, IActorRef market)
         {
-            Order o = evt.Order;
+            var o = evt.Order;
             DecreaseBalance(o.Price * o.Amount);
             CreateBuyOrder(market, o);
         }
@@ -188,87 +183,93 @@ namespace TradeExchangeDomain
         {
         }
 
+        public class AddMarket
+        {
+            public AddMarket(string name, IActorRef market, Symbol usdBtc)
+            {
+                Name = name;
+                Market = market;
+                Symbol = usdBtc;
+            }
+
+            public string Name { get; }
+            public IActorRef Market { get; }
+            public Symbol Symbol { get; }
+        }
+
         public class AddDueOrderExecuted
         {
-            public string OrderNum { get; }
-            public Money TotalChange { get; }
-
             public AddDueOrderExecuted(string orderNum, Money totalChange)
             {
                 OrderNum = orderNum;
                 TotalChange = totalChange;
             }
+
+            public string OrderNum { get; }
+            public Money TotalChange { get; }
         }
-        
+
         public class OrderCompleted
         {
-            public string Num { get; }
-
             public OrderCompleted(string num)
             {
                 Num = num;
             }
+
+            public string Num { get; }
         }
 
         public class BalanceChangedDueToOrderExecution
         {
-            public string ObjOrderNum { get; }
-            public Money ObjPrice { get; }
-
             public BalanceChangedDueToOrderExecution(string objOrderNum, Money objPrice)
             {
                 ObjOrderNum = objOrderNum;
                 ObjPrice = objPrice;
             }
 
+            public string ObjOrderNum { get; }
+            public Money ObjPrice { get; }
         }
 
         public class BuyOrderCreated
         {
-            public Order Order { get; }
-
             public BuyOrderCreated(Order order)
             {
                 Order = order;
             }
+
+            public Order Order { get; }
         }
 
         public class SellOrderCreated
         {
-            public Order Order { get; }
-
             public SellOrderCreated(Order order)
             {
                 Order = order;
             }
+
+            public Order Order { get; }
         }
 
         public class MoneyAdded
         {
-            public Money Money { get; }
-
             public MoneyAdded(Money money)
             {
                 Money = money;
             }
+
+            public Money Money { get; }
         }
 
-        public class NotEnoughFunds
-        {
-        }
 
         public class AddFunds
         {
-            public Money Value { get; }
-
             public AddFunds(Money value)
             {
                 Value = value;
             }
-        }
-    }
 
-    public class GracefulShutdown
-    {
+            public Money Value { get; }
+        }
     }
 }

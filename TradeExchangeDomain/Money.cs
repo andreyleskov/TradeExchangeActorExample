@@ -1,27 +1,25 @@
-﻿using System;
-using System.Reflection.Emit;
-
-namespace TradeExchangeDomain
+﻿namespace TradeExchangeDomain
 {
     /// <summary>
-    ///  did not find good money package for netstandard with custom curriencies support
+    ///     did not find good money package for netstandard with custom curriencies support
     /// </summary>
     public class Money
     {
         private readonly string _description;
-        public decimal Amount { get; }
-        public Currency Currency { get; }
 
         public Money(decimal amount, Currency cur)
         {
             Amount = amount;
             Currency = cur;
-            _description = $"{amount} {cur}"; 
+            _description = $"{amount} {cur}";
         }
+
+        public decimal Amount { get; }
+        public Currency Currency { get; }
 
         public override bool Equals(object obj)
         {
-            if(obj is Money m)
+            if (obj is Money m)
                 return m.Equals(this);
             return false;
         }
@@ -43,32 +41,33 @@ namespace TradeExchangeDomain
         public static Money operator +(Money a, Money b)
         {
             CheckCurrency(a, b);
-            
-            return new Money(a.Amount + b.Amount,a.Currency);
+
+            return new Money(a.Amount + b.Amount, a.Currency);
         }
 
         public static Money operator -(Money a, Money b)
         {
             CheckCurrency(a, b);
-            
-            return new Money(a.Amount - b.Amount,a.Currency);
+
+            return new Money(a.Amount - b.Amount, a.Currency);
         }
-        
+
         public static Money operator *(Money a, decimal b)
         {
-            return new Money(a.Amount * b,a.Currency);
+            return new Money(a.Amount * b, a.Currency);
         }
-        
+
         public static Money operator /(Money a, decimal b)
         {
-            return new Money(a.Amount / b,a.Currency);
+            return new Money(a.Amount / b, a.Currency);
         }
-        
+
         public static bool operator >(Money a, Money b)
-                 {
-                     CheckCurrency(a, b);
-                     return a.Amount > b.Amount;
-                 }
+        {
+            CheckCurrency(a, b);
+            return a.Amount > b.Amount;
+        }
+
         public static bool operator >=(Money a, Money b)
         {
             CheckCurrency(a, b);
@@ -80,6 +79,7 @@ namespace TradeExchangeDomain
             CheckCurrency(a, b);
             return a.Amount < b.Amount;
         }
+
         public static bool operator <=(Money a, Money b)
         {
             CheckCurrency(a, b);
@@ -97,9 +97,5 @@ namespace TradeExchangeDomain
         {
             return _description;
         }
-    }
-
-    public class CurrencyMismatchException : Exception
-    {
     }
 }

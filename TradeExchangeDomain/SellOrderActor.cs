@@ -1,5 +1,4 @@
 ﻿using Akka.Actor;
-using Akka.Persistence;
 
 namespace TradeExchangeDomain
 {

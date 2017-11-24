@@ -7,41 +7,13 @@ namespace TradeExchangeDomain
 {
     public class OrderBookActor : ReceiveActor
     {
-        class PlacedOrder
-        {
-            public IActorRef Sender;
-            public Order Order;
-            public decimal Amount; //to track order amount - cannot modify it on Original Order
-        }
+        private readonly SortedDictionary<decimal, List<PlacedOrder>> Buyers =
+            new SortedDictionary<decimal, List<PlacedOrder>>();
 
-        SortedDictionary<decimal, List<PlacedOrder>> Sellers = new SortedDictionary<decimal, List<PlacedOrder>>();
-        SortedDictionary<decimal, List<PlacedOrder>> Buyers = new SortedDictionary<decimal, List<PlacedOrder>>();
+        private readonly OrderMatchContext MatchContext = new OrderMatchContext();
 
-        class OrderMatchContext
-        {
-            public decimal Done { get; private set; }
-            public decimal Left { get; private set; }
-
-            public Order Order;
-            public IActorRef OrderSender { get; private set; }
-            public void Init(Order o, IActorRef sender)
-            {
-                Order = o;
-                Left = Order.Amount;
-                Done = 0;
-                OrderSender = sender;
-            }
-
-            public bool IsFullfilled => Done >= Order.Amount;
-
-            public void Fulfill(decimal amount)
-            {
-                Done += amount;
-                Left -= amount;
-            }
-        }
-
-        private OrderMatchContext MatchContext = new OrderMatchContext();
+        private readonly SortedDictionary<decimal, List<PlacedOrder>> Sellers =
+            new SortedDictionary<decimal, List<PlacedOrder>>();
 
         public OrderBookActor()
         {
@@ -52,7 +24,6 @@ namespace TradeExchangeDomain
                                          ExecuteOrder(MatchContext, d => d <= o.Price.Amount, Sellers).ToArray();
                                      RemoveOrders(executedSellOrders, Sellers);
                                      AddOrderIfNeed(o, MatchContext, Buyers);
-
                                  });
             Receive<NewSellOrder>(o =>
                                   {
@@ -62,7 +33,6 @@ namespace TradeExchangeDomain
                                       RemoveOrders(executedSellOrders, Buyers);
 
                                       AddOrderIfNeed(o, MatchContext, Sellers);
-
                                   });
         }
 
@@ -72,15 +42,15 @@ namespace TradeExchangeDomain
         {
             if (orderMatchContext.Done < o.Amount)
             {
-                var placedOrder = new PlacedOrder()
+                var placedOrder = new PlacedOrder
                                   {
                                       Amount = o.Amount - orderMatchContext.Done,
                                       Order = o,
                                       Sender = Sender
                                   };
-                if (sortedDictionary.TryGetValue(o.Price.Amount, out List<PlacedOrder> orders))
+                if (sortedDictionary.TryGetValue(o.Price.Amount, out var orders))
                     orders.Add(placedOrder);
-                else sortedDictionary.Add(o.Price.Amount, new List<PlacedOrder>() {placedOrder});
+                else sortedDictionary.Add(o.Price.Amount, new List<PlacedOrder> {placedOrder});
             }
         }
 
@@ -97,7 +67,7 @@ namespace TradeExchangeDomain
         }
 
         /// <summary>
-        /// returns executed orders to remove
+        ///     returns executed orders to remove
         /// </summary>
         private IEnumerable<PlacedOrder> ExecuteOrder(OrderMatchContext ctx,
                                                       Predicate<decimal> predicate,
@@ -114,8 +84,12 @@ namespace TradeExchangeDomain
                     {
                         //matched order fully executed
                         ctx.Fulfill(matchedOrder.Amount);
-                        matchedOrder.Sender.Tell(new OrderExecuted(matchedOrder.Order.Id,matchedOrder.Amount,matchedOrder.Order.Price));
-                        ctx.OrderSender.Tell(new OrderExecuted(ctx.Order.Id,matchedOrder.Amount,matchedOrder.Order.Price));
+                        matchedOrder.Sender.Tell(new OrderExecuted(matchedOrder.Order.Id,
+                                                                   matchedOrder.Amount,
+                                                                   matchedOrder.Order.Price));
+                        ctx.OrderSender.Tell(new OrderExecuted(ctx.Order.Id,
+                                                               matchedOrder.Amount,
+                                                               matchedOrder.Order.Price));
 
                         yield return matchedOrder;
                     }
@@ -124,8 +98,10 @@ namespace TradeExchangeDomain
                         //matched order partially executed
                         //initial order fully executed
                         matchedOrder.Amount -= ctx.Left;
-                        matchedOrder.Sender.Tell(new OrderExecuted(matchedOrder.Order.Id, ctx.Left, matchedOrder.Order.Price));
-                        ctx.OrderSender.Tell(new OrderExecuted(ctx.Order.Id,ctx.Left,matchedOrder.Order.Price));
+                        matchedOrder.Sender.Tell(new OrderExecuted(matchedOrder.Order.Id,
+                                                                   ctx.Left,
+                                                                   matchedOrder.Order.Price));
+                        ctx.OrderSender.Tell(new OrderExecuted(ctx.Order.Id, ctx.Left, matchedOrder.Order.Price));
 
                         ctx.Fulfill(ctx.Left);
 
@@ -134,13 +110,43 @@ namespace TradeExchangeDomain
                 }
             }
         }
-        
-        
+
+        private class PlacedOrder
+        {
+            public decimal Amount; //to track order amount - cannot modify it on Original Order
+            public Order Order;
+            public IActorRef Sender;
+        }
+
+        private class OrderMatchContext
+        {
+            public Order Order;
+            public decimal Done { get; private set; }
+            public decimal Left { get; private set; }
+            public IActorRef OrderSender { get; private set; }
+
+            public bool IsFullfilled => Done >= Order.Amount;
+
+            public void Init(Order o, IActorRef sender)
+            {
+                Order = o;
+                Left = Order.Amount;
+                Done = 0;
+                OrderSender = sender;
+            }
+
+            public void Fulfill(decimal amount)
+            {
+                Done += amount;
+                Left -= amount;
+            }
+        }
+
+
         public class OrderExecuted
         {
-            public string OrderNum;
             public readonly Money Price;
-            public decimal Amount { get; }
+            public string OrderNum;
 
             public OrderExecuted(string orderNum, decimal amount, Money price)
             {
@@ -148,6 +154,8 @@ namespace TradeExchangeDomain
                 OrderNum = orderNum;
                 Amount = amount;
             }
+
+            public decimal Amount { get; }
         }
     }
 }
