@@ -18,6 +18,7 @@ namespace TradeExchangeDomain
             Command<GracefulShutdown>(s => Context.Stop(Self));
             Command<Init>(i =>
                           {
+                              
                               Persist(new OrderCreated(i.Order),
                                       c =>
                                       {

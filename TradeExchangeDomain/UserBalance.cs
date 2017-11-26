@@ -22,6 +22,12 @@ namespace TradeExchangeDomain
                                               .ContinueWith(t => PoisonPill.Instance)
                                               .PipeTo(Self);
                                       });
+            Command<GetBalance>(m =>
+                                {
+                                    Sender.Tell(Balances.TryGetValue(m.Currency, out Money money)
+                                                    ? money
+                                                    : m.Currency.Emit(0));
+                                });
             Command<AddMarket>(m =>
                                {
                                    Markets[m.Symbol] = m.Market;
@@ -30,7 +36,7 @@ namespace TradeExchangeDomain
                                        ActiveOrders.Add(pending.Id);
                                        var orderActor = Context.ActorOf<BuyOrderActor>(pending.Id);
                                        orderActor.Tell(new OrderActor.InitBalance(Self));
-                                       orderActor.Tell(new OrderActor.Execute(m.Market));
+                                       orderActor.Forward(new OrderActor.Execute(m.Market));
                                    }
 
                                    foreach (var pending in PendingSellOrders.Values.Where(o => o.Position == m.Symbol))
@@ -54,6 +60,7 @@ namespace TradeExchangeDomain
                                          e => ActiveOrders.Contains(e.OrderNum));
             Command<OrderActor.OrderCompleted>(e =>
                                                {
+                                                   Log.Info("order completed");
                                                    Persist(new OrderCompleted(e.OrderNum),
                                                            c => ActiveOrders.Remove(c.Num));
                                                },
@@ -62,11 +69,13 @@ namespace TradeExchangeDomain
                                  {
                                      if (!Markets.TryGetValue(o.Position, out var market))
                                      {
+                                         Log.Info("order cannot be added due to market mismatch");
                                          Sender.Tell(new Status.Failure(new UnsupportedMarketException()));
                                          return;
                                      }
                                      if (!CheckBalance(o.TotalToBuy))
                                      {
+                                         Log.Info("order cannot be added due not lack of funds");
                                          Sender.Tell(new Status.Failure(new NotEnoughFundsException()));
                                          return;
                                      }
@@ -78,11 +87,13 @@ namespace TradeExchangeDomain
                                   {
                                       if (!Markets.TryGetValue(o.Position, out var market))
                                       {
+                                          Log.Info("order cannot be added due to market mismatch");
                                           Sender.Tell(new Status.Failure(new UnsupportedMarketException()));
                                           return;
                                       }
                                       if (!CheckBalance(o.TotalToSell))
                                       {
+                                          Log.Info("order cannot be added due not lack of funds");
                                           Sender.Tell(new Status.Failure(new NotEnoughFundsException()));
                                           return;
                                       }
@@ -270,6 +281,16 @@ namespace TradeExchangeDomain
             }
 
             public Money Value { get; }
+        }
+
+        public class GetBalance
+        {
+            public Currency Currency { get; }
+
+            public GetBalance(Currency currency)
+            {
+                Currency = currency;
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ namespace TradeExchangeDomain
     {
         public SellOrderActor()
         {
-            Command<Execute>(e => e.OrderBook.Tell(new NewSellOrder(Order), Self));
+            Command<Execute>(e => e.OrderBook.Forward(new NewSellOrder(Order)));
         }
 
         protected override void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender)

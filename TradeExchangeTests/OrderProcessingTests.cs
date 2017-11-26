@@ -32,9 +32,11 @@ namespace TradeExchangeTests
             orderBook.Tell(newBuyOrder, buyOrderProbe);
 
             //executed a sell order
+            givenSellOrderProbe.ExpectMsg<OrderBookActor.OrderReceived>();
             givenSellOrderProbe.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == newBuyOrder.Amount);
 
             //Executed a buy order
+            buyOrderProbe.ExpectMsg<OrderBookActor.OrderReceived>();
             buyOrderProbe.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == newBuyOrder.Amount);
         }
 
@@ -65,15 +67,20 @@ namespace TradeExchangeTests
             orderBook.Tell(newBuyOrderB, buyOrderProbeB);
 
             //executed first buy order from first sell order
+            givenSellOrderProbeA.ExpectMsg<OrderBookActor.OrderReceived>();
             givenSellOrderProbeA.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == newBuyOrderA.Amount);
+            
+            buyOrderProbeA.ExpectMsg<OrderBookActor.OrderReceived>();
             buyOrderProbeA.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == newBuyOrderA.Amount);
 
             //executed second buy order from both sell orders(5 from first, 5 from second)
             var leftovers = givenSellOrderA.Amount - newBuyOrderA.Amount;
+            givenSellOrderProbeB.ExpectMsg<OrderBookActor.OrderReceived>();
             givenSellOrderProbeA.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == leftovers);
             givenSellOrderProbeB.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount
                                                                               == newBuyOrderB.Amount - leftovers);
 
+            buyOrderProbeB.ExpectMsg<OrderBookActor.OrderReceived>();
             buyOrderProbeB.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == leftovers);
             buyOrderProbeB.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == newBuyOrderB.Amount - leftovers);
         }
@@ -101,12 +108,16 @@ namespace TradeExchangeTests
             orderBook.Tell(newBuyOrder, givenBuyOrderProbe);
 
             //executed a sell order
+            givenSellOrderProbeA.ExpectMsg<OrderBookActor.OrderReceived>();
             givenSellOrderProbeA.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == givenSellOrderA.Amount);
+            
+            givenSellOrderProbeB.ExpectMsg<OrderBookActor.OrderReceived>();
             givenSellOrderProbeB.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount
                                                                               == newBuyOrder.Amount
                                                                               - givenSellOrderA.Amount);
 
             //Executed a buy order  by parts
+            givenBuyOrderProbe.ExpectMsg<OrderBookActor.OrderReceived>();
             givenBuyOrderProbe.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == givenSellOrderA.Amount);
             givenBuyOrderProbe.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount
                                                                             == newBuyOrder.Amount
@@ -140,6 +151,8 @@ namespace TradeExchangeTests
             orderActor.Tell(new OrderBookActor.OrderExecuted("test", 1.5M, 6000.Usd()));
             EventFilter.Exception<OrderActor.InvalidOrderStateException>();
         }
+        
+        
 
 
         [Fact]
@@ -191,11 +204,13 @@ namespace TradeExchangeTests
 
             var orderBook = Sys.ActorOf(Props.Create(() => new OrderBookActor()));
             orderBook.Tell(givenSellOrder, givenSellOrderActorProbe.Ref);
+            givenSellOrderActorProbe.ExpectMsg<OrderBookActor.OrderReceived>();
 
             //when adding matching buy order
             var newBuyOrder = new NewBuyOrder(Symbol.UsdBtc, new Money(9000, Currency.Usd), givenSellOrder.Amount);
             var buyOrderActorProbe = CreateTestProbe("buyOrderActor");
             orderBook.Tell(newBuyOrder, buyOrderActorProbe.Ref);
+            buyOrderActorProbe.ExpectMsg<OrderBookActor.OrderReceived>();
 
             givenSellOrderActorProbe.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == givenSellOrder.Amount);
             buyOrderActorProbe.ExpectMsg<OrderBookActor.OrderExecuted>(o => o.Amount == newBuyOrder.Amount);
@@ -210,13 +225,16 @@ namespace TradeExchangeTests
             var givenSellOrderActorProbe = CreateTestProbe("givenSellOrderActor");
 
             var orderBook = Sys.ActorOf(Props.Create(() => new OrderBookActor()));
-            orderBook.Tell(givenSellOrder, givenSellOrderActorProbe.Ref);
+            orderBook.Tell(givenSellOrder,givenSellOrderActorProbe);
 
             //when adding matching buy order
             var newBuyOrder = new NewBuyOrder(Symbol.UsdBtc, new Money(7000, Currency.Usd), 1);
             var buyOrderActorProbe = CreateTestProbe("buyOrderActor");
             orderBook.Tell(newBuyOrder, buyOrderActorProbe.Ref);
 
+            givenSellOrderActorProbe.ExpectMsg<OrderBookActor.OrderReceived>();
+            buyOrderActorProbe.ExpectMsg<OrderBookActor.OrderReceived>();
+            
             givenSellOrderActorProbe.ExpectNoMsg(TimeSpan.FromSeconds(1));
             buyOrderActorProbe.ExpectNoMsg(TimeSpan.FromSeconds(1));
         }

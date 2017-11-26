@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchangeTests", "Trade
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchangeDomain", "TradeExchangeDomain\TradeExchangeDomain.csproj", "{94B850E1-8945-4C62-8F4D-C1DBAC092B2F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchange.Tests.Stress", "TradeExchange.Tests.Stress\TradeExchange.Tests.Stress.csproj", "{5B21438F-C573-4F4C-B6CE-703BECC39700}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{94B850E1-8945-4C62-8F4D-C1DBAC092B2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{94B850E1-8945-4C62-8F4D-C1DBAC092B2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{94B850E1-8945-4C62-8F4D-C1DBAC092B2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B21438F-C573-4F4C-B6CE-703BECC39700}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B21438F-C573-4F4C-B6CE-703BECC39700}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B21438F-C573-4F4C-B6CE-703BECC39700}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B21438F-C573-4F4C-B6CE-703BECC39700}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -19,6 +19,7 @@ namespace TradeExchangeDomain
         {
             Receive<NewBuyOrder>(o =>
                                  {
+                                     Sender.Tell(new OrderReceived(o.Id));
                                      MatchContext.Init(o, Sender);
                                      var executedSellOrders =
                                          ExecuteOrder(MatchContext, d => d <= o.Price.Amount, Sellers).ToArray();
@@ -27,6 +28,7 @@ namespace TradeExchangeDomain
                                  });
             Receive<NewSellOrder>(o =>
                                   {
+                                      Sender.Tell(new OrderReceived(o.Id));
                                       MatchContext.Init(o, Sender);
                                       var executedSellOrders =
                                           ExecuteOrder(MatchContext, d => d >= o.Price.Amount, Buyers).ToArray();
@@ -156,6 +158,16 @@ namespace TradeExchangeDomain
             }
 
             public decimal Amount { get; }
+        }
+
+        public class OrderReceived
+        {
+            public string Num;
+
+            public OrderReceived(string Num)
+            {
+                this.Num = Num;
+            }
         }
     }
 }

@@ -11,5 +11,15 @@
         {
             return new Money(amount, Currency.Usd);
         }
+        
+        public static Money Btc(this decimal amount)
+        {
+            return new Money(amount, Currency.Btc);
+        }
+
+        public static Money Btc(this int amount)
+        {
+            return new Money(amount, Currency.Btc);
+        }
     }
 }

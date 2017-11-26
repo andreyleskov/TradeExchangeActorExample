@@ -40,7 +40,44 @@ namespace TradeExchangeTests
             //all money for buy remain booked for order, even if it is not fulfilled
             balance.UnderlyingActor.Balances[Currency.Usd].Amount.ShouldEqual(7000M);
         }
+        
+        [Fact]
+        public async Task Given_balance_actor_When_creating_order_Then_sender_receives_notification()
+        {
+            //given market
+            var orderBook = Sys.NewMarket(Symbol.UsdBtc)
+                               .Seller(20000, 1)
+                               .OrderBook();
 
+            var balance = Sys.ActorOf<UserBalance>("test_balance");
+            balance.Tell(new UserBalance.AddFunds(Currency.Usd.Emit(40000)));
+            balance.Tell(new UserBalance.AddFunds(Currency.Btc.Emit(10)));
+            balance.Tell(new UserBalance.AddMarket("test market", orderBook, Symbol.UsdBtc));
+           
+            
+            balance.Tell(Symbol.UsdBtc.Buy(11000, 3),TestActor);
+            ExpectMsg<OrderBookActor.OrderReceived>();
+        }
+        
+        
+        [Fact]
+        public async Task Given_balance_actor_When_asking_for_balance_it_returns_balance()
+        {
+            var balance = Sys.ActorOf<UserBalance>("test_balance");
+            var givenUsd = Currency.Usd.Emit(40000);
+            balance.Tell(new UserBalance.AddFunds(givenUsd));
+            var givenBtc = Currency.Btc.Emit(10);
+            balance.Tell(new UserBalance.AddFunds(givenBtc));
+
+            var usd = await balance.Ask<Money>(new UserBalance.GetBalance(Currency.Usd));
+            usd.ShouldEqual(givenUsd);
+            
+            var btc = await balance.Ask<Money>(new UserBalance.GetBalance(Currency.Btc));
+            btc.ShouldEqual(givenBtc);
+        }
+
+        
+        
         [Fact]
         public void Given_balance_actor_When_creating_order_Then_order_book_receives_order()
         {
