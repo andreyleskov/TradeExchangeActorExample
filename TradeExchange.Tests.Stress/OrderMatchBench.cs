@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
@@ -27,8 +28,8 @@ namespace TradeExchange.Tests.Stress
         public int PriceRange = 3;
         public int BaseAmount { get; } = 3;
         public int AmountRange = 2;
-        public int UsersCount { get; } = 1;
-        public int OrdersToCreatePerUser { get; } = 1;
+        public int UsersCount { get; } = 10;
+        public int OrdersToCreatePerUser { get; } = 10;
         public int TotalOrders => UsersCount * OrdersToCreatePerUser;
 
         public IEnumerable<NextOrder> GetOrders()
@@ -101,7 +102,7 @@ namespace TradeExchange.Tests.Stress
                                               @"akka {  
                     stdout-loglevel = DEBUG
                     loglevel = DEBUG
-                    log-config-on-start = on
+                    log-config-on-start = off
                     loggers= [""Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog""]
                     actor {                
                         debug {  
@@ -162,7 +163,64 @@ namespace TradeExchange.Tests.Stress
            
         }
 
-      
+
+        class OrderBalanceCountActor : ReceiveActor
+        {
+            private IActorRef requester;
+            decimal orderUsdTotal = 0;
+            decimal orderBtcTotal = 0;
+            Stopwatch watch = new Stopwatch();
+            public OrderBalanceCountActor()
+            {
+                Receive<GetBalance>(b =>
+                                    {
+                                        requester = Sender;
+                                        Context.ActorSelection("akka://perfSystem/user/user_*/order_*")
+                                               .Tell(new OrderActor.GetBalance());
+                                        Context.System.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromMilliseconds(50),
+                                                                                        TimeSpan.FromSeconds(1),
+                                                                                        Self,
+                                                                                        new CheckFinish(),
+                                                                                        Self);
+                                        watch.Start();
+                                    });
+                Receive<CheckFinish>(f =>
+                                     {
+                                         if (watch.Elapsed > TimeSpan.FromSeconds(1))
+                                         {
+                                            requester.Tell(new Totals(orderUsdTotal, orderBtcTotal));
+                                         }
+                                     });
+                Receive<OrderActor.OrderBalance>(msg =>
+                                                 {
+                                                     if (msg.Total.Currency == Currency.Btc)
+                                                         orderBtcTotal += msg.Total.Amount;
+                                                     else if (msg.Total.Currency == Currency.Usd)
+                                                         orderUsdTotal += msg.Total.Amount;
+                                                     watch.Restart();
+                                                 });
+                
+               
+            }
+            class CheckFinish
+            {
+            }
+            
+            public class GetBalance
+            {
+            }
+            internal class Totals
+            {
+                public decimal OrderUsdTotal { get; }
+                public decimal OrderBtcTotal { get; }
+
+                public Totals(decimal orderUsdTotal, decimal orderBtcTotal)
+                {
+                    OrderUsdTotal = orderUsdTotal;
+                    OrderBtcTotal = orderBtcTotal;
+                }
+            }
+        }
         [PerfCleanup]
         public void CheckTotals()
         {
@@ -170,38 +228,24 @@ namespace TradeExchange.Tests.Stress
             var inbox = Inbox.Create(_actorSystem);
             _actorSystem.ActorSelection("user/user_*/order_*").Tell(new OrderActor.GetBalance(), inbox.Receiver);
 
-            decimal orderUsdTotal = 0;
-            decimal orderBtcTotal = 0;
-            do
-            {
-                try
-                {
-                    var msg = inbox.Receive(TimeSpan.FromSeconds(1)) as OrderActor.OrderBalance;
-                    
-                    if (msg.Total.Currency == Currency.Btc)
-                        orderBtcTotal += msg.Total.Amount;
-                    else
-                    if (msg.Total.Currency == Currency.Usd)
-                        orderUsdTotal += msg.Total.Amount;
-                }
-                catch (TimeoutException ex)
-                {
-                    break;
-                }
-            }while(true);
+            var counter = _actorSystem.ActorOf<OrderBalanceCountActor>();
+            var orderTotals = counter.Ask<OrderBalanceCountActor.Totals>(new OrderBalanceCountActor.GetBalance()).Result;
+     
             
             
             var balancesUsdTotal =_users.Select(u => u.Ask<Money>(new UserBalance.GetBalance(Currency.Usd)).Result.Amount).Sum();
-            (balancesUsdTotal + orderUsdTotal).ShouldEqual(TotalMarketUsd);
+            (balancesUsdTotal + orderTotals.OrderUsdTotal).ShouldEqual(TotalMarketUsd);
 
             Log.Logger.Information("usd totals is ok");
 
             
             var balancesBtcTotal = _users.Select(u => u.Ask<Money>(new UserBalance.GetBalance(Currency.Btc)).Result.Amount).Sum();
-            (balancesBtcTotal + orderBtcTotal).ShouldEqual(TotalMarketBtc);
+            (balancesBtcTotal + orderTotals.OrderBtcTotal).ShouldEqual(TotalMarketBtc);
             Log.Logger.Information("btc totals is ok");
             
             _actorSystem.Terminate();
         }
     }
+
+  
 }
