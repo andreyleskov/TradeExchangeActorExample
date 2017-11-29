@@ -36,7 +36,7 @@ namespace TradeExchangeDomain
                                    {
                                        ActiveOrders.Add(pending.Id);
                                        var orderActor = Context.ActorOf<BuyOrderActor>(pending.Id);
-                                       orderActor.Tell(new OrderActor.InitBalance(Self));
+                                       orderActor.Tell(new OrderActor.Init(pending, Self));
                                        orderActor.Forward(new OrderActor.Execute(m.Market));
                                    }
 
@@ -44,7 +44,7 @@ namespace TradeExchangeDomain
                                    {
                                        ActiveOrders.Add(pending.Id);
                                        var orderActor = Context.ActorOf<SellOrderActor>(pending.Id);
-                                       orderActor.Tell(new OrderActor.InitBalance(Self));
+                                       orderActor.Tell(new OrderActor.Init(pending,Self));
                                        orderActor.Tell(new OrderActor.Execute(m.Market));
                                    }
                                });
@@ -88,8 +88,7 @@ namespace TradeExchangeDomain
                                                  DecreaseBalance(o1.Price * o1.Amount);
                                                  ActiveOrders.Add(o1.Id);
                                                  var orderActor = Context.ActorOf<BuyOrderActor>("order_"+o1.Id);
-                                                 orderActor.Tell(new OrderActor.Init(o1));
-                                                 orderActor.Tell(new OrderActor.InitBalance(Self));
+                                                 orderActor.Tell(new OrderActor.Init(o1,Self));
                                                  orderActor.Tell(new OrderActor.Execute(market),sender);
                                              });
                                  });
@@ -114,8 +113,7 @@ namespace TradeExchangeDomain
                                                   DecreaseBalance(o1.Position.Target.Emit(o1.Amount));
                                                   ActiveOrders.Add(o1.Id);
                                                   var orderActor = Context.ActorOf<SellOrderActor>("order_"+o1.Id);
-                                                  orderActor.Tell(new OrderActor.Init(o1));
-                                                  orderActor.Tell(new OrderActor.InitBalance(Self));
+                                                  orderActor.Tell(new OrderActor.Init(o1,Self));
                                                   orderActor.Tell(new OrderActor.Execute(market),sender);
                                               });
                                   });

@@ -20,36 +20,35 @@ namespace TradeExchangeDomain
             Command<GracefulShutdown>(s => Context.Stop(Self));
             Command<Init>(i =>
                           {
-                              
-                              Persist(new OrderCreated(i.Order),
+                              BalanceRef = i.Balance;
+                              Persist(i.Order,
                                       c =>
                                       {
-                                          Order = c.Order;
-                                          _amountLeft = c.Order.Amount;
+                                          Order = c;
+                                          _amountLeft = c.Amount;
                                       });
                           });
-            Command<InitBalance>(i => { BalanceRef = i.BalanceRef; });
             Command<OrderBookActor.OrderExecuted>(e =>
                                                   {
                                                       if (_amountLeft < e.Amount)
                                                           throw new InvalidOrderStateException();
 
-                                                      Persist(new OrderExecution(e.Amount),
+                                                      Persist(e.Amount,
                                                               o =>
                                                               {
-                                                                  _amountLeft -= o.Amount;
+                                                                  _amountLeft -= o;
                                                                   OnExecuted(e, Sender);
                                                                   if (_amountLeft == 0)
                                                                       BalanceRef.Tell(new OrderCompleted(Order.Id));
                                                               });
                                                   },
                                                   e => e.OrderNum == Order?.Id);
-            Recover<OrderCreated>(o =>
+            Recover<Order>(o =>
                                   {
-                                      Order = o.Order;
+                                      Order = o;
                                       _amountLeft = Order.Amount;
                                   });
-            Recover<OrderExecution>(o => _amountLeft -= o.Amount);
+            Recover<decimal>(o => _amountLeft -= o);
         }
 
         public override string PersistenceId { get; }
@@ -57,31 +56,12 @@ namespace TradeExchangeDomain
 
         protected abstract void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender);
 
-        public class OrderExecution
-        {
-            public OrderExecution(decimal amount)
-            {
-                Amount = amount;
-            }
-
-            public decimal Amount { get; }
-        }
-
-        public class InitBalance
-        {
-            public InitBalance(IActorRef balance)
-            {
-                BalanceRef = balance;
-            }
-
-            public IActorRef BalanceRef { get; }
-        }
-
-
         public class Init
         {
-            public Init(Order order)
+            public IActorRef Balance;
+            public Init(Order order, IActorRef balance)
             {
+                Balance = balance;
                 Order = order;
             }
 
@@ -113,15 +93,7 @@ namespace TradeExchangeDomain
         {
         }
         
-        public class OrderCreated
-        {
-            public OrderCreated(Order order)
-            {
-                Order = order;
-            }
-
-            public Order Order { get; }
-        }
+      
 
         public class OrderBalance
         {

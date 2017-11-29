@@ -28,8 +28,7 @@ namespace TradeExchangeTests
             //when adding matching buy order
 
             var orderActor = Sys.ActorOf<BuyOrderActor>();
-            orderActor.Tell(new OrderActor.Init(givenOrder));
-            orderActor.Tell(new OrderActor.InitBalance(TestActor));
+            orderActor.Tell(new OrderActor.Init(givenOrder,TestActor));
 
             orderActor.Tell(new OrderActor.GetBalance());
             ExpectMsg<OrderActor.OrderBalance>(o => o.Total ==  givenOrder.Price * givenOrder.Amount);
@@ -47,8 +46,7 @@ namespace TradeExchangeTests
             //when adding matching buy order
 
             var orderActor = Sys.ActorOf<SellOrderActor>();
-            orderActor.Tell(new OrderActor.Init(givenSellOrder));
-            orderActor.Tell(new OrderActor.InitBalance(TestActor));
+            orderActor.Tell(new OrderActor.Init(givenSellOrder,TestActor));
 
             orderActor.Tell(new OrderActor.GetBalance());
             ExpectMsg<OrderActor.OrderBalance>(o => o.Total == givenSellOrder.Amount.Btc());
@@ -172,7 +170,7 @@ namespace TradeExchangeTests
             var orderActor = Sys.ActorOf<BuyOrderActor>(orderNum.ToString());
             var givenOrder = new Order(Symbol.UsdBtc, new Money(7000, Currency.Usd), 5);
 
-            orderActor.Tell(new OrderActor.Init(givenOrder));
+            orderActor.Tell(new OrderActor.Init(givenOrder,TestActor));
 
             var orderBook = CreateTestProbe();
             orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
@@ -185,8 +183,7 @@ namespace TradeExchangeTests
         {
             var orderActor = Sys.ActorOf<SellOrderActor>("test");
 
-            orderActor.Tell(new OrderActor.Init(new Order(Symbol.UsdBtc, Currency.Usd.Emit(5000), 2, "test")));
-            orderActor.Tell(new OrderActor.InitBalance(TestActor));
+            orderActor.Tell(new OrderActor.Init(new Order(Symbol.UsdBtc, Currency.Usd.Emit(5000), 2, "test"),TestActor));
             orderActor.Tell(new OrderBookActor.OrderExecuted("test", 1, 5000.Usd()));
             //overflow, some mistake !
             orderActor.Tell(new OrderBookActor.OrderExecuted("test", 1.5M, 6000.Usd()));
@@ -205,8 +202,7 @@ namespace TradeExchangeTests
             var userBalance = CreateTestProbe();
             var orderBook = CreateTestProbe();
 
-            orderActor.Tell(new OrderActor.Init(givenOrder));
-            orderActor.Tell(new OrderActor.InitBalance(userBalance.Ref));
+            orderActor.Tell(new OrderActor.Init(givenOrder,userBalance.Ref));
             orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
 
             orderBook.Send(orderActor, new OrderBookActor.OrderExecuted(orderNum, givenOrder.Amount / 2, 7500.Usd()));
@@ -230,9 +226,7 @@ namespace TradeExchangeTests
             var givenOrder = new Order(Symbol.UsdBtc, new Money(7000, Currency.Usd), 5);
             var orderBook = CreateTestProbe();
 
-            orderActor.Tell(new OrderActor.Init(givenOrder));
-            orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
-
+            orderActor.Tell(new OrderActor.Init(givenOrder,orderBook.Ref));
             orderBook.ExpectMsg<SellOrder>(o => o.Amount == givenOrder.Amount);
         }
 
