@@ -6,7 +6,8 @@ namespace TradeExchangeDomain
     {
         public BuyOrderActor()
         {
-            Command<Execute>(e => e.OrderBook.Tell(new NewBuyOrder(Order), Self));
+            Command<Execute>(e => e.OrderBook.Tell(new NewBuyOrder(Order), Sender));
+            Command<GetBalance>(e => Sender.Tell(new OrderBalance(Order.Price * Order.Amount)));
         }
 
         protected override void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender)

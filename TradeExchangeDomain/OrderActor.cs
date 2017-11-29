@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using Akka.Actor;
 using Akka.Persistence;
 
@@ -119,6 +120,19 @@ namespace TradeExchangeDomain
             }
 
             public Order Order { get; }
+        }
+
+        public class OrderBalance
+        {
+            public Money Total;
+
+            public OrderBalance(Money order)
+            {
+                Total = order;
+            }
+        }
+        public class GetBalance
+        {
         }
     }
 }

@@ -42,7 +42,7 @@ namespace TradeExchangeTests
         }
         
         [Fact]
-        public async Task Given_balance_actor_When_creating_order_Then_sender_receives_notification()
+        public async Task Given_balance_actor_When_creating_sell_order_Then_sender_receives_notification()
         {
             //given market
             var orderBook = Sys.NewMarket(Symbol.UsdBtc)
@@ -54,10 +54,24 @@ namespace TradeExchangeTests
             balance.Tell(new UserBalance.AddFunds(Currency.Btc.Emit(10)));
             balance.Tell(new UserBalance.AddMarket("test market", orderBook, Symbol.UsdBtc));
            
-            
-            balance.Tell(Symbol.UsdBtc.Buy(11000, 3),TestActor);
-            ExpectMsg<OrderBookActor.OrderReceived>();
+            await balance.Ask<OrderBookActor.OrderReceived>(Symbol.UsdBtc.Buy(11000, 3), TimeSpan.FromSeconds(1));
         }
+        [Fact]
+        public async Task Given_balance_actor_When_creating_buy_order_Then_sender_receives_notification()
+        {
+            //given market
+            var orderBook = Sys.NewMarket(Symbol.UsdBtc)
+                               .Seller(20000, 1)
+                               .OrderBook();
+
+            var balance = Sys.ActorOf<UserBalance>("test_balance");
+            balance.Tell(new UserBalance.AddFunds(Currency.Usd.Emit(40000)));
+            balance.Tell(new UserBalance.AddFunds(Currency.Btc.Emit(10)));
+            balance.Tell(new UserBalance.AddMarket("test market", orderBook, Symbol.UsdBtc));
+           
+            await balance.Ask<OrderBookActor.OrderReceived>(Symbol.UsdBtc.Sell(11000, 3), TimeSpan.FromSeconds(1));
+        }
+        
         
         
         [Fact]

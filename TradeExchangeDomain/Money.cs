@@ -38,6 +38,17 @@
             }
         }
 
+        public static bool operator ==(Money a, Money b)
+        {
+            CheckCurrency(a, b);
+
+            return a?.Amount == b?.Amount;
+        }
+        public static bool operator !=(Money a, Money b)
+        {
+            return ! (a== b);
+        }
+        
         public static Money operator +(Money a, Money b)
         {
             CheckCurrency(a, b);

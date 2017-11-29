@@ -7,6 +7,7 @@ namespace TradeExchangeDomain
         public SellOrderActor()
         {
             Command<Execute>(e => e.OrderBook.Forward(new NewSellOrder(Order)));
+            Command<GetBalance>(e => Sender.Tell(new OrderBalance(Order.Amount.Btc())));
         }
 
         protected override void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender)

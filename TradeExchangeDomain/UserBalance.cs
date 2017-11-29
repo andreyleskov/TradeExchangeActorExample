@@ -79,9 +79,18 @@ namespace TradeExchangeDomain
                                          Sender.Tell(new Status.Failure(new NotEnoughFundsException()));
                                          return;
                                      }
+                                     var sender = Sender;
 
                                      Persist(new BuyOrderCreated(o),
-                                             c => { ExecuteBuyOrder(c, market); });
+                                             c => {
+                                                 var o1 = c.Order;
+                                                 DecreaseBalance(o1.Price * o1.Amount);
+                                                 ActiveOrders.Add(o1.Id);
+                                                 var orderActor = Context.ActorOf<BuyOrderActor>("order_"+o1.Id);
+                                                 orderActor.Tell(new OrderActor.Init(o1));
+                                                 orderActor.Tell(new OrderActor.InitBalance(Self));
+                                                 orderActor.Tell(new OrderActor.Execute(market),sender);
+                                             });
                                  });
             Command<NewSellOrder>(o =>
                                   {
@@ -97,9 +106,17 @@ namespace TradeExchangeDomain
                                           Sender.Tell(new Status.Failure(new NotEnoughFundsException()));
                                           return;
                                       }
-
+                                      var sender = Sender;
                                       Persist(new SellOrderCreated(o),
-                                              c => { ExecuteSellOrder(c, market); });
+                                              c => {
+                                                  var o1 = c.Order;
+                                                  DecreaseBalance(o1.Position.Target.Emit(o1.Amount));
+                                                  ActiveOrders.Add(o1.Id);
+                                                  var orderActor = Context.ActorOf<SellOrderActor>("order_"+o1.Id);
+                                                  orderActor.Tell(new OrderActor.Init(o1));
+                                                  orderActor.Tell(new OrderActor.InitBalance(Self));
+                                                  orderActor.Tell(new OrderActor.Execute(market),sender);
+                                              });
                                   });
 
             Recover<SellOrderCreated>(e =>
@@ -137,22 +154,6 @@ namespace TradeExchangeDomain
                 Balances[money.Currency] = money;
         }
 
-        private void ExecuteSellOrder(SellOrderCreated evt, IActorRef market)
-        {
-            var o = evt.Order;
-            DecreaseBalance(o.Position.Target.Emit(o.Amount));
-            CreateSellOrder(market, o);
-        }
-
-        private void CreateSellOrder(IActorRef market, Order o)
-        {
-            ActiveOrders.Add(o.Id);
-            var orderActor = Context.ActorOf<SellOrderActor>(o.Id);
-            orderActor.Tell(new OrderActor.Init(o));
-            orderActor.Tell(new OrderActor.InitBalance(Self));
-            orderActor.Tell(new OrderActor.Execute(market));
-        }
-
         private bool CheckBalance(Money total)
         {
             return Balances.TryGetValue(total.Currency, out var balance) && balance >= total;
@@ -169,22 +170,6 @@ namespace TradeExchangeDomain
             Balances[total.Currency] = balance - total;
         }
 
-
-        private void ExecuteBuyOrder(BuyOrderCreated evt, IActorRef market)
-        {
-            var o = evt.Order;
-            DecreaseBalance(o.Price * o.Amount);
-            CreateBuyOrder(market, o);
-        }
-
-        private void CreateBuyOrder(IActorRef market, Order o)
-        {
-            ActiveOrders.Add(o.Id);
-            var orderActor = Context.ActorOf<BuyOrderActor>(o.Id);
-            orderActor.Tell(new OrderActor.Init(o));
-            orderActor.Tell(new OrderActor.InitBalance(Self));
-            orderActor.Tell(new OrderActor.Execute(market));
-        }
 
         public class NotEnoughFundsException : Exception
         {

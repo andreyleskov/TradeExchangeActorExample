@@ -14,6 +14,46 @@ namespace TradeExchangeTests
         {
         }
 
+        
+        [Fact]
+        public void
+            Given_buy_order_When_asking_for_balance_Then_it_replies()
+        {
+            //Given order book with a sell order
+            var givenOrder
+                = new NewBuyOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+
+
+            //when adding matching buy order
+
+            var orderActor = Sys.ActorOf<BuyOrderActor>();
+            orderActor.Tell(new OrderActor.Init(givenOrder));
+            orderActor.Tell(new OrderActor.InitBalance(TestActor));
+
+            orderActor.Tell(new OrderActor.GetBalance());
+            ExpectMsg<OrderActor.OrderBalance>(o => o.Total ==  givenOrder.Price * givenOrder.Amount);
+        }
+
+        
+        [Fact]
+        public void
+            Given_sell_order_When_asking_for_balance_Then_it_replies()
+        {
+            //Given order book with a sell order
+            var givenSellOrder = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+
+
+            //when adding matching buy order
+
+            var orderActor = Sys.ActorOf<SellOrderActor>();
+            orderActor.Tell(new OrderActor.Init(givenSellOrder));
+            orderActor.Tell(new OrderActor.InitBalance(TestActor));
+
+            orderActor.Tell(new OrderActor.GetBalance());
+            ExpectMsg<OrderActor.OrderBalance>(o => o.Total == givenSellOrder.Amount.Btc());
+        }
+
+        
         [Fact]
         public void
             Given_big_order_When_adding_new_small_matching_Then_it_should_be_executed_and_initial_order_executed_partially()
