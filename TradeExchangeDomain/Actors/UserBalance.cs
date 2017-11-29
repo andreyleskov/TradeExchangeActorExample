@@ -36,7 +36,8 @@ namespace TradeExchangeDomain
                                    {
                                        ActiveOrders.Add(pending.Id);
                                        var orderActor = Context.ActorOf<BuyOrderActor>(pending.Id);
-                                       orderActor.Tell(new OrderActor.Init(pending, Self));
+                                       orderActor.Tell(pending);
+                                       orderActor.Tell(Self);
                                        orderActor.Forward(new OrderActor.Execute(m.Market));
                                    }
 
@@ -44,7 +45,8 @@ namespace TradeExchangeDomain
                                    {
                                        ActiveOrders.Add(pending.Id);
                                        var orderActor = Context.ActorOf<SellOrderActor>(pending.Id);
-                                       orderActor.Tell(new OrderActor.Init(pending,Self));
+                                       orderActor.Tell(Self);
+                                       orderActor.Tell(pending);
                                        orderActor.Tell(new OrderActor.Execute(m.Market));
                                    }
                                });
@@ -74,7 +76,7 @@ namespace TradeExchangeDomain
                                          Sender.Tell(new Status.Failure(new UnsupportedMarketException()));
                                          return;
                                      }
-                                     if (!CheckBalance(o.TotalToBuy))
+                                     if (!CheckBalance(o.Total))
                                      {
                                          Log.Info("order cannot be added due not lack of funds");
                                          Sender.Tell(new Status.Failure(new NotEnoughFundsException()));
@@ -88,7 +90,8 @@ namespace TradeExchangeDomain
                                                  DecreaseBalance(o1.Price * o1.Amount);
                                                  ActiveOrders.Add(o1.Id);
                                                  var orderActor = Context.ActorOf<BuyOrderActor>("order_"+o1.Id);
-                                                 orderActor.Tell(new OrderActor.Init(o1,Self));
+                                                 orderActor.Tell(o1);
+                                                 orderActor.Tell(Self);
                                                  orderActor.Tell(new OrderActor.Execute(market),sender);
                                              });
                                  });
@@ -100,7 +103,7 @@ namespace TradeExchangeDomain
                                           Sender.Tell(new Status.Failure(new UnsupportedMarketException()));
                                           return;
                                       }
-                                      if (!CheckBalance(o.TotalToSell))
+                                      if (!CheckBalance(o.Total))
                                       {
                                           Log.Info("order cannot be added due not lack of funds");
                                           Sender.Tell(new Status.Failure(new NotEnoughFundsException()));
@@ -113,7 +116,8 @@ namespace TradeExchangeDomain
                                                   DecreaseBalance(o1.Position.Target.Emit(o1.Amount));
                                                   ActiveOrders.Add(o1.Id);
                                                   var orderActor = Context.ActorOf<SellOrderActor>("order_"+o1.Id);
-                                                  orderActor.Tell(new OrderActor.Init(o1,Self));
+                                                  orderActor.Tell(o1);
+                                                  orderActor.Tell(Self);
                                                   orderActor.Tell(new OrderActor.Execute(market),sender);
                                               });
                                   });

@@ -13,6 +13,7 @@ namespace TradeExchangeDomain.Orders
             Id = id ?? Guid.NewGuid().ToString();
         }
 
+        public Money Total { get; protected set; }
         public Symbol Position { get; }
         public Money Price { get; } // per 1 Amount, no Lot support
         public decimal Amount { get; }

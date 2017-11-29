@@ -5,16 +5,10 @@ namespace TradeExchangeDomain
 {
     public class SellOrderActor : OrderActor
     {
-        public SellOrderActor()
+      
+        protected override void OnExecuting(Execute e)
         {
-            IActorRef orderReceivedWatcher = null;
-            Command<Execute>(e =>
-                             {
-                                 e.OrderBook.Tell(new SellOrder(Order));
-                                 orderReceivedWatcher = Sender;
-                             });
-            Command<OrderBookActor.OrderReceived>(r => orderReceivedWatcher.Forward(r));
-            Command<GetBalance>(e => Sender.Tell(new OrderBalance(Order.Amount.Btc())));
+            e.OrderBook.Tell(new SellOrder(Order));
         }
 
         protected override void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender)

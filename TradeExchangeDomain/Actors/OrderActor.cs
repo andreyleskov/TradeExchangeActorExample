@@ -13,21 +13,51 @@ namespace TradeExchangeDomain
         protected IActorRef BalanceRef;
         protected Order Order;
 
-        public OrderActor()
-        {
-            PersistenceId = Self.Path.Name;
 
+        protected virtual void Default()
+        {
             Command<GracefulShutdown>(s => Context.Stop(Self));
-            Command<Init>(i =>
-                          {
-                              BalanceRef = i.Balance;
-                              Persist(i.Order,
-                                      c =>
-                                      {
-                                          Order = c;
-                                          _amountLeft = c.Amount;
-                                      });
-                          });
+        }
+        
+        private void Initializing()
+        {
+            Command<IActorRef>(i =>
+                               {
+                                   BalanceRef = i;
+                                   if (Order != null)
+                                   {
+                                       BecomeStacked(() => Working());
+                                       Stash.UnstashAll();
+                                   }
+                               });               
+            Command<Order>(p => Persist(p,
+                                       c =>
+                                       {
+                                           Order = c;
+                                           _amountLeft = c.Amount;
+                                           if (BalanceRef != null)
+                                           {
+                                               BecomeStacked(() => Working());
+                                               Stash.UnstashAll();
+                                           }
+                                       })
+                          );
+            Default();
+                
+            CommandAny(c => Stash.Stash());
+        }
+
+        private void Working()
+        {
+            IActorRef orderReceivedWatcher = null;
+            Command<GetBalance>(e => Sender.Tell(new OrderBalance(Order.Total)));
+
+            Command<Execute>(e =>
+                             {
+                                 OnExecuting(e);
+                                 orderReceivedWatcher = Sender;
+                             });
+            Command<OrderBookActor.OrderReceived>(r => orderReceivedWatcher.Forward(r));
             Command<OrderBookActor.OrderExecuted>(e =>
                                                   {
                                                       if (_amountLeft < e.Amount)
@@ -43,6 +73,16 @@ namespace TradeExchangeDomain
                                                               });
                                                   },
                                                   e => e.OrderNum == Order?.Id);
+            Default();
+        }
+
+        protected abstract void OnExecuting(Execute e);
+
+        public OrderActor()
+        {
+            PersistenceId = Self.Path.Name;
+            BecomeStacked(() => Initializing());
+          
             Recover<Order>(o =>
                                   {
                                       Order = o;
@@ -55,18 +95,6 @@ namespace TradeExchangeDomain
 
 
         protected abstract void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender);
-
-        public class Init
-        {
-            public IActorRef Balance;
-            public Init(Order order, IActorRef balance)
-            {
-                Balance = balance;
-                Order = order;
-            }
-
-            public Order Order { get; }
-        }
 
         public class Execute
         {

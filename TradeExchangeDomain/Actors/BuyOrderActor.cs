@@ -6,17 +6,11 @@ namespace TradeExchangeDomain
     public class BuyOrderActor : OrderActor
     {
 
-        public BuyOrderActor()
+      
+        protected override void OnExecuting(Execute e)
         {
-            IActorRef orderReceivedWatcher = null;
+            e.OrderBook.Tell(new BuyOrder(Order));
 
-            Command<Execute>(e =>
-                             {
-                                 e.OrderBook.Tell(new BuyOrder(Order));
-                                 orderReceivedWatcher = Sender;
-                             });
-            Command<OrderBookActor.OrderReceived>(r => orderReceivedWatcher.Forward(r));
-            Command<GetBalance>(e => Sender.Tell(new OrderBalance(Order.Price * Order.Amount)));
         }
 
         protected override void OnExecuted(OrderBookActor.OrderExecuted e, IActorRef sender)

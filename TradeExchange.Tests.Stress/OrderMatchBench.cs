@@ -29,8 +29,8 @@ namespace TradeExchange.Tests.Stress
         public int PriceRange = 3;
         public int BaseAmount { get; } = 3;
         public int AmountRange = 2;
-        public int UsersCount { get; } = 10;
-        public int OrdersToCreatePerUser { get; } = 10;
+        public int UsersCount { get; } = 20;
+        public int OrdersToCreatePerUser { get; } = 20;
         public int TotalOrders => UsersCount * OrdersToCreatePerUser;
 
         public IEnumerable<NextOrder> GetOrders()
