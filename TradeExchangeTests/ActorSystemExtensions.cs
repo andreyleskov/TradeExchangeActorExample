@@ -1,6 +1,7 @@
 ﻿using Akka.Actor;
+using TradeExchangeDomain;
 
-namespace TradeExchangeDomain
+namespace TradeExchangeTests
 {
     public static class ActorSystemExtensions
     {

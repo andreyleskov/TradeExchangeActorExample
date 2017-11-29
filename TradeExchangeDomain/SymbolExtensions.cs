@@ -1,15 +1,17 @@
-﻿namespace TradeExchangeDomain
+﻿using TradeExchangeDomain.Orders;
+
+namespace TradeExchangeDomain
 {
     public static class SymbolExtensions
     {
-        public static NewSellOrder Sell(this Symbol symbol, decimal price, decimal amount, string id = null)
+        public static SellOrder Sell(this Symbol symbol, decimal price, decimal amount, string id = null)
         {
-            return new NewSellOrder(symbol, symbol.Base.Emit(price), amount, id);
+            return new SellOrder(symbol, symbol.Base.Emit(price), amount, id);
         }
 
-        public static NewBuyOrder Buy(this Symbol symbol, decimal price, decimal amount, string id = null)
+        public static BuyOrder Buy(this Symbol symbol, decimal price, decimal amount, string id = null)
         {
-            return new NewBuyOrder(symbol, new Money(price, symbol.Base), amount, id);
+            return new BuyOrder(symbol, new Money(price, symbol.Base), amount, id);
         }
     }
 }

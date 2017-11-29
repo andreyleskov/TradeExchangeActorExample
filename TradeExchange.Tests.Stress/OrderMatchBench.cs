@@ -13,6 +13,7 @@ using Serilog;
 using Serilog.Core;
 using Should;
 using TradeExchangeDomain;
+using TradeExchangeDomain.Orders;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,12 +53,12 @@ namespace TradeExchange.Tests.Stress
             if (_random.Next(0, 1) == 1)
             {
                 //buy btc
-                return new NewBuyOrder(Symbol.UsdBtc, price.Usd(), amount);
+                return new BuyOrder(Symbol.UsdBtc, price.Usd(), amount);
             }
             else
             {
                 //sell btc
-                return new NewSellOrder(Symbol.UsdBtc, price.Usd(), amount);
+                return new SellOrder(Symbol.UsdBtc, price.Usd(), amount);
             }
         }
     }

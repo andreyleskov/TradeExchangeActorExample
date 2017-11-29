@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TradeExchangeDomain
+namespace TradeExchangeDomain.Orders
 {
     public class Order
     {

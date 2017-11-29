@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using Akka.Actor;
 using Akka.Persistence;
+using TradeExchangeDomain.Orders;
 
 namespace TradeExchangeDomain
 {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
+using TradeExchangeDomain.Orders;
 
 namespace TradeExchangeDomain
 {
@@ -17,7 +18,7 @@ namespace TradeExchangeDomain
 
         public OrderBookActor()
         {
-            Receive<NewBuyOrder>(o =>
+            Receive<BuyOrder>(o =>
                                  {
                                      Sender.Tell(new OrderReceived(o.Id));
                                      MatchContext.Init(o, Sender);
@@ -26,7 +27,7 @@ namespace TradeExchangeDomain
                                      RemoveOrders(executedSellOrders, Sellers);
                                      AddOrderIfNeed(o, MatchContext, Buyers);
                                  });
-            Receive<NewSellOrder>(o =>
+            Receive<SellOrder>(o =>
                                   {
                                       Sender.Tell(new OrderReceived(o.Id));
                                       MatchContext.Init(o, Sender);

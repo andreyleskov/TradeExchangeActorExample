@@ -3,6 +3,7 @@ using Akka.Actor;
 using Akka.TestKit.Xunit2;
 using Should;
 using TradeExchangeDomain;
+using TradeExchangeDomain.Orders;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace TradeExchangeTests
         {
             //Given order book with a sell order
             var givenOrder
-                = new NewBuyOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+                = new BuyOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
 
 
             //when adding matching buy order
@@ -40,7 +41,7 @@ namespace TradeExchangeTests
             Given_sell_order_When_asking_for_balance_Then_it_replies()
         {
             //Given order book with a sell order
-            var givenSellOrder = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+            var givenSellOrder = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
 
 
             //when adding matching buy order
@@ -59,14 +60,14 @@ namespace TradeExchangeTests
             Given_big_order_When_adding_new_small_matching_Then_it_should_be_executed_and_initial_order_executed_partially()
         {
             //Given order book with a sell order
-            var givenSellOrder = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+            var givenSellOrder = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
             var givenSellOrderProbe = CreateTestProbe();
 
             var orderBook = Sys.ActorOf(Props.Create(() => new OrderBookActor()));
             orderBook.Tell(givenSellOrder, givenSellOrderProbe);
 
             //when adding matching buy order
-            var newBuyOrder = new NewBuyOrder(Symbol.UsdBtc, new Money(10000, Currency.Usd), 1);
+            var newBuyOrder = new BuyOrder(Symbol.UsdBtc, new Money(10000, Currency.Usd), 1);
             var buyOrderProbe = CreateTestProbe();
 
             orderBook.Tell(newBuyOrder, buyOrderProbe);
@@ -85,10 +86,10 @@ namespace TradeExchangeTests
         public void Given_big_orders_When_adding_many_small_partly_matching_orders_Then_it_should_be_executed()
         {
             //Given order book with a sell order
-            var givenSellOrderA = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+            var givenSellOrderA = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
             var givenSellOrderProbeA = CreateTestProbe();
 
-            var givenSellOrderB = new NewSellOrder(Symbol.UsdBtc, new Money(9000, Currency.Usd), 10);
+            var givenSellOrderB = new SellOrder(Symbol.UsdBtc, new Money(9000, Currency.Usd), 10);
             var givenSellOrderProbeB = CreateTestProbe();
 
 
@@ -97,10 +98,10 @@ namespace TradeExchangeTests
             orderBook.Tell(givenSellOrderB, givenSellOrderProbeB);
 
             //when adding matching buy order
-            var newBuyOrderA = new NewBuyOrder(Symbol.UsdBtc, new Money(8200, Currency.Usd), 5);
+            var newBuyOrderA = new BuyOrder(Symbol.UsdBtc, new Money(8200, Currency.Usd), 5);
             var buyOrderProbeA = CreateTestProbe();
 
-            var newBuyOrderB = new NewBuyOrder(Symbol.UsdBtc, new Money(9500, Currency.Usd), 10);
+            var newBuyOrderB = new BuyOrder(Symbol.UsdBtc, new Money(9500, Currency.Usd), 10);
             var buyOrderProbeB = CreateTestProbe();
 
             orderBook.Tell(newBuyOrderA, buyOrderProbeA);
@@ -130,10 +131,10 @@ namespace TradeExchangeTests
             Given_big_orders_When_adding_new_big_matching_Then_it_should_be_executed_and_initial_order_executed_partially()
         {
             //Given order book with a sell order
-            var givenSellOrderA = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+            var givenSellOrderA = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
             var givenSellOrderProbeA = CreateTestProbe();
 
-            var givenSellOrderB = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
+            var givenSellOrderB = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 10);
             var givenSellOrderProbeB = CreateTestProbe();
 
 
@@ -142,7 +143,7 @@ namespace TradeExchangeTests
             orderBook.Tell(givenSellOrderB, givenSellOrderProbeB);
 
             //when adding matching buy order
-            var newBuyOrder = new NewBuyOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 15);
+            var newBuyOrder = new BuyOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 15);
             var givenBuyOrderProbe = CreateTestProbe();
 
             orderBook.Tell(newBuyOrder, givenBuyOrderProbe);
@@ -176,7 +177,7 @@ namespace TradeExchangeTests
             var orderBook = CreateTestProbe();
             orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
 
-            orderBook.ExpectMsg<NewBuyOrder>(o => o.Amount == givenOrder.Amount);
+            orderBook.ExpectMsg<BuyOrder>(o => o.Amount == givenOrder.Amount);
         }
 
         [Fact]
@@ -232,14 +233,14 @@ namespace TradeExchangeTests
             orderActor.Tell(new OrderActor.Init(givenOrder));
             orderActor.Tell(new OrderActor.Execute(orderBook.Ref));
 
-            orderBook.ExpectMsg<NewSellOrder>(o => o.Amount == givenOrder.Amount);
+            orderBook.ExpectMsg<SellOrder>(o => o.Amount == givenOrder.Amount);
         }
 
         [Fact]
         public void Given_sell_order_When_adding_new_matching_buy_Then_it_should_be_executed()
         {
             //Given  order book with a sell order
-            var givenSellOrder = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 1);
+            var givenSellOrder = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 1);
             var givenSellOrderActorProbe = CreateTestProbe("givenSellOrderActor");
 
             var orderBook = Sys.ActorOf(Props.Create(() => new OrderBookActor()));
@@ -247,7 +248,7 @@ namespace TradeExchangeTests
             givenSellOrderActorProbe.ExpectMsg<OrderBookActor.OrderReceived>();
 
             //when adding matching buy order
-            var newBuyOrder = new NewBuyOrder(Symbol.UsdBtc, new Money(9000, Currency.Usd), givenSellOrder.Amount);
+            var newBuyOrder = new BuyOrder(Symbol.UsdBtc, new Money(9000, Currency.Usd), givenSellOrder.Amount);
             var buyOrderActorProbe = CreateTestProbe("buyOrderActor");
             orderBook.Tell(newBuyOrder, buyOrderActorProbe.Ref);
             buyOrderActorProbe.ExpectMsg<OrderBookActor.OrderReceived>();
@@ -261,14 +262,14 @@ namespace TradeExchangeTests
         public void Given_sell_order_When_adding_new_not_matching_buy_Then_non_orders_are_executed()
         {
             //Given  order book with a sell order
-            var givenSellOrder = new NewSellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 1);
+            var givenSellOrder = new SellOrder(Symbol.UsdBtc, new Money(8000, Currency.Usd), 1);
             var givenSellOrderActorProbe = CreateTestProbe("givenSellOrderActor");
 
             var orderBook = Sys.ActorOf(Props.Create(() => new OrderBookActor()));
             orderBook.Tell(givenSellOrder,givenSellOrderActorProbe);
 
             //when adding matching buy order
-            var newBuyOrder = new NewBuyOrder(Symbol.UsdBtc, new Money(7000, Currency.Usd), 1);
+            var newBuyOrder = new BuyOrder(Symbol.UsdBtc, new Money(7000, Currency.Usd), 1);
             var buyOrderActorProbe = CreateTestProbe("buyOrderActor");
             orderBook.Tell(newBuyOrder, buyOrderActorProbe.Ref);
 

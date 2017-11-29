@@ -2,8 +2,11 @@
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit.Xunit2;
+using Serilog;
+using Serilog.Core;
 using Should;
 using TradeExchangeDomain;
+using TradeExchangeDomain.Orders;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,8 +14,23 @@ namespace TradeExchangeTests
 {
     public class BalanceTests : TestKit
     {
-        public BalanceTests(ITestOutputHelper output) : base("test", output)
+        public BalanceTests(ITestOutputHelper output) :
+            base(
+        @"akka {  
+                    stdout-loglevel = DEBUG
+                    loglevel = DEBUG
+                    log-config-on-start = on
+                    actor {                
+                        debug {  
+                              receive = on 
+                              autoreceive = on
+                              lifecycle = on
+                              event-stream = on
+                              unhandled = on
+                        }
+                    }","test", output)
         {
+        
         }
 
 
@@ -32,9 +50,8 @@ namespace TradeExchangeTests
             balance.Ref.Tell(new UserBalance.AddMarket("test market", orderBook, Symbol.UsdBtc));
             balance.Ref.Tell(Symbol.UsdBtc.Buy(11000, 3));
 
-
             //will buy 1 by 5000 + 0.25 by 10000
-            await Task.Delay(Dilated(TimeSpan.FromSeconds(0.3)));
+            await Task.Delay(TimeSpan.FromSeconds(1));
 
             balance.UnderlyingActor.Balances[Currency.Btc].Amount.ShouldEqual(11.25M);
             //all money for buy remain booked for order, even if it is not fulfilled
@@ -100,7 +117,7 @@ namespace TradeExchangeTests
             var orderBook = CreateTestProbe();
             balance.Tell(new UserBalance.AddMarket("test market", orderBook, Symbol.UsdBtc));
             balance.Tell(Symbol.UsdBtc.Sell(7000, 5));
-            orderBook.ExpectMsg<NewSellOrder>(o => o.Amount == 5 && o.Price.Amount == 7000);
+            orderBook.ExpectMsg<SellOrder>(o => o.Amount == 5 && o.Price.Amount == 7000);
         }
 
         [Fact]

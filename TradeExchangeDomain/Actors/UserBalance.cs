@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Persistence;
+using TradeExchangeDomain.Orders;
 
 namespace TradeExchangeDomain
 {
@@ -65,7 +66,7 @@ namespace TradeExchangeDomain
                                                            c => ActiveOrders.Remove(c.Num));
                                                },
                                                e => ActiveOrders.Contains(e.OrderNum));
-            Command<NewBuyOrder>(o =>
+            Command<BuyOrder>(o =>
                                  {
                                      if (!Markets.TryGetValue(o.Position, out var market))
                                      {
@@ -92,7 +93,7 @@ namespace TradeExchangeDomain
                                                  orderActor.Tell(new OrderActor.Execute(market),sender);
                                              });
                                  });
-            Command<NewSellOrder>(o =>
+            Command<SellOrder>(o =>
                                   {
                                       if (!Markets.TryGetValue(o.Position, out var market))
                                       {
