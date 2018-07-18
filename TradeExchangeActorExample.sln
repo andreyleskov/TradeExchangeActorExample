@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.0.0
 MinimumVisualStudioVersion = 10.0.0.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchangeTests", "TradeExchangeTests\TradeExchangeTests.csproj", "{FBCE17F8-2C6E-4342-9AF0-FE1B61D78A92}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchange.Tests.Unit", "TradeExchange.Tests.Unit\TradeExchange.Tests.Unit.csproj", "{FBCE17F8-2C6E-4342-9AF0-FE1B61D78A92}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchangeDomain", "TradeExchangeDomain\TradeExchangeDomain.csproj", "{94B850E1-8945-4C62-8F4D-C1DBAC092B2F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchange.Domain", "TradeExchange.Domain\TradeExchange.Domain.csproj", "{94B850E1-8945-4C62-8F4D-C1DBAC092B2F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TradeExchange.Tests.Stress", "TradeExchange.Tests.Stress\TradeExchange.Tests.Stress.csproj", "{5B21438F-C573-4F4C-B6CE-703BECC39700}"
 EndProject

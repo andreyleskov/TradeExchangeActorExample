@@ -8,7 +8,6 @@ using Akka.Actor;
 using Akka.Event;
 using NBench;
 using Pro.NBench.xUnit.XunitExtensions;
-using Pro.NBench.xUnit.XunitExtensions.Pro.NBench.xUnit.XunitExtensions;
 using Serilog;
 using Serilog.Core;
 using Should;
